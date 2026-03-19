@@ -723,6 +723,16 @@ def _patch_torch_cuda_module():
         except ImportError:
             pass
 
+        # Patch torch.cuda.random - use torchada.cuda.random module
+        if not hasattr(torch.musa, "random"):
+            try:
+                from .cuda import random as random_stub
+
+                sys.modules["torch.cuda.random"] = random_stub
+                torch.musa.random = random_stub
+            except ImportError:
+                pass
+
         # Patch missing _lazy_call from torch_musa.core._lazy_init
         # torch_musa only maps _lazy_init but not _lazy_call
         # This is needed for code that does: from torch.cuda import _lazy_call

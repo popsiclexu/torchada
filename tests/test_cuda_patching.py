@@ -497,6 +497,50 @@ class TestRNGFunctions:
             torch.cuda.manual_seed(42)
 
 
+class TestRandomFunctions:
+    """Test torch.cuda.random module and API proxy behavior."""
+
+    def test_cuda_random_module_available(self):
+        import torch
+
+        assert hasattr(torch.cuda, "random")
+        assert hasattr(torch.cuda.random, "get_rng_state")
+        assert hasattr(torch.cuda.random, "get_rng_state_all")
+        assert hasattr(torch.cuda.random, "set_rng_state")
+        assert hasattr(torch.cuda.random, "set_rng_state_all")
+        assert hasattr(torch.cuda.random, "manual_seed")
+        assert hasattr(torch.cuda.random, "manual_seed_all")
+        assert hasattr(torch.cuda.random, "seed")
+        assert hasattr(torch.cuda.random, "initial_seed")
+
+    def test_cuda_random_aliases_musa(self):
+        import torch
+
+        if hasattr(torch, "musa") and hasattr(torch.musa, "random"):
+            assert torch.cuda.random is torch.musa.random
+
+    def test_cuda_random_functionality(self):
+        import torch
+
+        # only execute on an actual GPU backend to avoid no-GPU failures
+        if not torch.cuda.is_available():
+            return
+
+        torch.cuda.random.manual_seed(42)
+        torch.cuda.random.manual_seed_all(42)
+
+        state = torch.cuda.random.get_rng_state()
+        assert state is not None
+
+        state_all = torch.cuda.random.get_rng_state_all()
+        assert state_all is not None
+
+        torch.cuda.random.set_rng_state(state)
+        torch.cuda.random.set_rng_state_all(state_all)
+
+        assert isinstance(torch.cuda.random.initial_seed(), int)
+
+
 class TestMemoryFunctions:
     """Test additional memory functions."""
 
@@ -1922,7 +1966,6 @@ class TestValidateDevice:
 
     def test_patch_when_attribute_missing(self, monkeypatch):
         """Verify the fallback implementation is installed when the attribute is absent."""
-        import torch
         import torch.nn.attention.flex_attention as flex_attention
 
         from torchada._patch import _patch_validate_device
