@@ -722,6 +722,18 @@ def _patch_torch_cuda_module():
                         musa_memory_module.MUSAPluggableAllocator
                     )
 
+                # Add any missing pool functions from _cpp_ops_module to musa_memory_module
+                from ._cpp_ops import _cpp_ops_module
+
+                _cuda_pool_funcs = ["_cuda_beginAllocateCurrentThreadToPool",
+                                    "_cuda_endAllocateToPool", 
+                                    "_cuda_releasePool"
+                                    ]
+                for cuda_name in _cuda_pool_funcs:
+                    func = getattr(_cpp_ops_module, cuda_name, None)
+                    if func is not None:
+                        setattr(musa_memory_module, cuda_name, func)
+
         # Patch torch.cuda.graph context manager to accept cuda_graph= keyword
         # MUSA's graph class uses musa_graph= but CUDA code uses cuda_graph=
         _patch_graph_context_manager()

@@ -48,17 +48,16 @@ from ._runtime import (
 from .triton.autotune.fused_moe import set_default_moe_config_dir
 from .utils.cpp_extension import CUDA_HOME
 
-# Automatically apply patches on import
-apply_patches()
-
-# Set default MoE config path for SGL and vLLM
-set_default_moe_config_dir()
-
 # Load C++ operator overrides if enabled via TORCHADA_ENABLE_CPP_OPS=1
 from ._cpp_ops import load_cpp_ops
 
 load_cpp_ops()
 
+# Automatically apply patches on import
+apply_patches()
+
+# Set default MoE config path for SGL and vLLM
+set_default_moe_config_dir()
 
 def get_version() -> str:
     """Return the version of torchada."""
