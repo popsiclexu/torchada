@@ -70,6 +70,7 @@ def _detect_musa_arch() -> str:
     _musa_arch_cached = arch
     return arch
 
+
 def load_cpp_ops(force_reload: bool = False) -> Optional[object]:
     """
     Load the C++ operator overrides extension.
@@ -156,10 +157,6 @@ def load_cpp_ops(force_reload: bool = False) -> Optional[object]:
             )
 
         _cpp_ops_module._mark_loaded()
-
-        # Inject memory pool allocation functions into torch.musa.memory
-        # so that `from torch.cuda.memory import _cuda_beginAllocateCurrentThreadToPool` etc. work
-        _inject_memory_pool_functions(_cpp_ops_module)
 
         return _cpp_ops_module
 
