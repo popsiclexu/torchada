@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 
@@ -48,7 +48,7 @@ def scaled_fp8_quant(
     scale: Optional[torch.Tensor] = None,
     num_token_padding: Optional[int] = None,
     use_per_token_if_dynamic: bool = False,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     assert input.ndim == 2, f"Expected 2D input tensor, got {input.ndim}D"
     shape = input.shape
     if num_token_padding:
