@@ -12,34 +12,40 @@
 
 #include "ops.h"
 
+#include "torch_musa/csrc/core/Device.h"
+#include "torch_musa/csrc/aten/musa/MUSAContext.h"
+#include "torch_musa/csrc/core/MUSAPluggableAllocator.h"
+#include <thread>
+
 namespace torchada {
 
 // ============================================================================
-// Example: Operator override template (commented out - for reference)
+// Memory pool allocation functions (CUDA-compatible API on MUSA)
 // ============================================================================
-//
-// To override an ATen operator, follow this pattern:
-//
-// static at::Tensor custom_add_impl(
-//     const at::Tensor& self,
-//     const at::Tensor& other,
-//     const at::Scalar& alpha) {
-//
-//     log_op_call("add.Tensor");
-//
-//     // Your custom implementation here
-//     // IMPORTANT: Avoid calling the same operator to prevent infinite recursion
-//     // Use in-place operations or lower-level primitives instead
-//     auto result = at::empty_like(self);
-//     result.copy_(self);
-//     result.add_(other, alpha);
-//     return result;
-// }
-//
-// Then register it:
-// TORCH_LIBRARY_IMPL(aten, PrivateUse1, m) {
-//     m.impl("add.Tensor", custom_add_impl);
-// }
+
+static void _musa_beginAllocateCurrentThreadToPool(
+    c10::DeviceIndex device,
+    c10::musa::MempoolId_t mempool_id) {
+  auto tid = std::this_thread::get_id();
+
+  c10::musa::MUSACachingAllocator::beginAllocateToPool(
+      device, mempool_id, [=](musaStream_t) {
+        auto current_tid = std::this_thread::get_id();
+        return current_tid == tid;
+      });
+}
+
+static void _musa_endAllocateToPool(
+    c10::DeviceIndex device,
+    c10::musa::MempoolId_t mempool_id) {
+  c10::musa::MUSACachingAllocator::endAllocateToPool(device, mempool_id);
+}
+
+static void _musa_releasePool(
+    c10::DeviceIndex device,
+    c10::musa::MempoolId_t mempool_id) {
+  c10::musa::MUSACachingAllocator::releasePool(device, mempool_id);
+}
 
 // ============================================================================
 // Utility functions exposed to Python
@@ -61,6 +67,7 @@ void mark_loaded() {
 
 }  // namespace torchada
 
+
 // ============================================================================
 // Python bindings
 // ============================================================================
@@ -74,4 +81,14 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
           "Get the C++ ops extension version");
     m.def("_mark_loaded", &torchada::mark_loaded,
           "Mark the extension as loaded (internal use)");
+
+    m.def("_cuda_beginAllocateCurrentThreadToPool",
+          &torchada::_musa_beginAllocateCurrentThreadToPool,
+          "Begin allocating memory from the current thread to a memory pool");
+    m.def("_cuda_endAllocateToPool",
+          &torchada::_musa_endAllocateToPool,
+          "End allocating memory to a memory pool");
+    m.def("_cuda_releasePool",
+          &torchada::_musa_releasePool,
+          "Release a memory pool");
 }

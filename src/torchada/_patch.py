@@ -30,6 +30,7 @@ from typing import Any, Callable, List, Optional
 
 import torch
 
+from ._cpp_ops import get_module
 from ._platform import is_musa_platform
 
 _patched = False
@@ -721,6 +722,19 @@ def _patch_torch_cuda_module():
                     musa_memory_module.CUDAPluggableAllocator = (
                         musa_memory_module.MUSAPluggableAllocator
                     )
+
+                # Add any missing pool functions from _cpp_ops_module to musa_memory_module
+                _cpp_ops_module = get_module()
+
+                if _cpp_ops_module is not None:
+                    _cuda_pool_funcs = ["_cuda_beginAllocateCurrentThreadToPool",
+                                        "_cuda_endAllocateToPool",
+                                        "_cuda_releasePool"
+                                        ]
+                    for cuda_name in _cuda_pool_funcs:
+                        func = getattr(_cpp_ops_module, cuda_name, None)
+                        if func is not None:
+                            setattr(musa_memory_module, cuda_name, func)
 
         # Patch torch.cuda.graph context manager to accept cuda_graph= keyword
         # MUSA's graph class uses musa_graph= but CUDA code uses cuda_graph=

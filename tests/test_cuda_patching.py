@@ -747,6 +747,59 @@ class TestTorchCudaMemory:
 
         assert CUDAPluggableAllocator is MUSAPluggableAllocator
 
+    def test_memory_pool_functions_available_on_musa(self):
+        """Test that CUDA-compatible memory pool functions are available on MUSA.
+
+        When the C++ extension is loaded, _cuda_beginAllocateCurrentThreadToPool,
+        _cuda_endAllocateToPool, and _cuda_releasePool should be injected into
+        torch.musa.memory so that `from torch.cuda.memory import _cuda_*` works.
+        """
+        import torch
+
+        import torchada
+
+        if not torchada.is_musa_platform():
+            pytest.skip("Only applicable on MUSA platform")
+
+        from torchada._cpp_ops import get_module as get_cpp_ops_module
+
+        cpp_ops = get_cpp_ops_module()
+        if cpp_ops is None:
+            pytest.skip("C++ ops extension not loaded (set TORCHADA_ENABLE_CPP_OPS=1)")
+
+        musa_memory = torch.musa.memory
+        assert hasattr(musa_memory, "_cuda_beginAllocateCurrentThreadToPool"), \
+            "_cuda_beginAllocateCurrentThreadToPool not found in torch.musa.memory"
+        assert hasattr(musa_memory, "_cuda_endAllocateToPool"), \
+            "_cuda_endAllocateToPool not found in torch.musa.memory"
+        assert hasattr(musa_memory, "_cuda_releasePool"), \
+            "_cuda_releasePool not found in torch.musa.memory"
+
+    def test_memory_pool_functions_importable_from_cuda_memory(self):
+        """Test that CUDA memory pool functions can be imported from torch.cuda.memory.
+
+        This verifies the end-to-end flow: downstream code using
+        `from torch.cuda.memory import _cuda_beginAllocateCurrentThreadToPool`
+        works transparently on MUSA.
+        """
+        import torchada
+
+        if not torchada.is_musa_platform():
+            pytest.skip("Only applicable on MUSA platform")
+
+        from torchada._cpp_ops import get_module as get_cpp_ops_module
+
+        cpp_ops = get_cpp_ops_module()
+        if cpp_ops is None:
+            pytest.skip("C++ ops extension not loaded (set TORCHADA_ENABLE_CPP_OPS=1)")
+
+        from torch.cuda.memory import _cuda_beginAllocateCurrentThreadToPool
+        from torch.cuda.memory import _cuda_endAllocateToPool
+        from torch.cuda.memory import _cuda_releasePool
+
+        assert callable(_cuda_beginAllocateCurrentThreadToPool)
+        assert callable(_cuda_endAllocateToPool)
+        assert callable(_cuda_releasePool)
 
 class TestTorchGenerator:
     """Test torch.Generator works with cuda device on MUSA platform."""
