@@ -157,6 +157,18 @@ def load_cpp_ops(force_reload: bool = False) -> Optional[object]:
             )
 
         _cpp_ops_module._mark_loaded()
+        import torch
+         # Add any missing pool functions from _cpp_ops_module to musa_memory_module
+        musa_memory_module = torch.musa.memory
+        if _cpp_ops_module is not None:
+            _cuda_pool_funcs = ["_cuda_beginAllocateCurrentThreadToPool",
+                                "_cuda_endAllocateToPool",
+                                "_cuda_releasePool"
+                                ]
+            for cuda_name in _cuda_pool_funcs:
+                func = getattr(_cpp_ops_module, cuda_name, None)
+                if func is not None:
+                    setattr(musa_memory_module, cuda_name, func)
 
         return _cpp_ops_module
 
