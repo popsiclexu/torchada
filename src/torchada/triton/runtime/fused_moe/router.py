@@ -358,7 +358,6 @@ def select_experts(
     layer_id: Optional[int] = None,
     num_token_non_padded: Optional[torch.Tensor] = None,
 ) -> StandardTopKOutput:
-
     top_k = topk_config.top_k
     use_grouped_topk = topk_config.use_grouped_topk
     topk_group = topk_config.topk_group

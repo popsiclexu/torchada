@@ -188,10 +188,11 @@ torchada supports overriding ATen operators at the C++ level for better performa
 
 **See [docs/custom_musa_ops.md](docs/custom_musa_ops.md) for detailed documentation.**
 
-**Quick start**:
-```bash
-export TORCHADA_ENABLE_CPP_OPS=1
-```
+**C++ extensions are automatically loaded on MUSA platform when torchada is imported.**
+
+The C++ extension provides CUDA-compatible APIs including:
+- Memory pool functions (`_cuda_beginAllocateCurrentThreadToPool`, `_cuda_endAllocateToPool`, `_cuda_releasePool`)
+- These are injected into `torch.cuda.memory` to enable CUDA code using memory pools to work on MUSA
 
 **Adding a new operator override**:
 
@@ -202,7 +203,6 @@ export TORCHADA_ENABLE_CPP_OPS=1
 3. The extension is JIT-compiled on first use
 
 **Environment variables**:
-- `TORCHADA_ENABLE_CPP_OPS=1` - Enable C++ operator overrides
 - `TORCHADA_CPP_OPS_VERBOSE=1` - Show compilation output
 - `TORCHADA_DEBUG_CPP_OPS=1` - Log operator calls
 - `TORCHADA_DISABLE_OP_OVERRIDE_<OP_NAME>=1` - Disable specific operator override

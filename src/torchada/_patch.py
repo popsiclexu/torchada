@@ -723,18 +723,20 @@ def _patch_torch_cuda_module():
                         musa_memory_module.MUSAPluggableAllocator
                     )
 
-                # Add any missing pool functions from _cpp_ops_module to musa_memory_module
-                _cpp_ops_module = get_module()
-
-                if _cpp_ops_module is not None:
-                    _cuda_pool_funcs = ["_cuda_beginAllocateCurrentThreadToPool",
-                                        "_cuda_endAllocateToPool",
-                                        "_cuda_releasePool"
-                                        ]
-                    for cuda_name in _cuda_pool_funcs:
-                        func = getattr(_cpp_ops_module, cuda_name, None)
+                # Inject CUDA-compatible memory pool functions from C++ extension
+                # These functions (_cuda_beginAllocateCurrentThreadToPool, etc.) are
+                # implemented in torchada's C++ extension to provide CUDA API compatibility
+                # for torch_musa's memory pool allocator.
+                cpp_ops_module = get_module()
+                if cpp_ops_module is not None:
+                    for func_name in [
+                        "_cuda_beginAllocateCurrentThreadToPool",
+                        "_cuda_endAllocateToPool",
+                        "_cuda_releasePool",
+                    ]:
+                        func = getattr(cpp_ops_module, func_name, None)
                         if func is not None:
-                            setattr(musa_memory_module, cuda_name, func)
+                            setattr(musa_memory_module, func_name, func)
 
         # Patch torch.cuda.graph context manager to accept cuda_graph= keyword
         # MUSA's graph class uses musa_graph= but CUDA code uses cuda_graph=

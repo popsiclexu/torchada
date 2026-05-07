@@ -27,6 +27,9 @@ Usage:
 __version__ = "0.1.53"
 
 from . import cuda, utils
+
+# C++ operator overrides are automatically loaded on MUSA platform
+from ._cpp_ops import load_cpp_ops
 from ._patch import apply_patches, get_original_init_process_group, is_patched
 from ._platform import (
     Platform,
@@ -48,9 +51,6 @@ from ._runtime import (
 from .triton.autotune.fused_moe import set_default_moe_config_dir
 from .utils.cpp_extension import CUDA_HOME
 
-# Load C++ operator overrides if enabled via TORCHADA_ENABLE_CPP_OPS=1
-from ._cpp_ops import load_cpp_ops
-
 load_cpp_ops()
 
 # Automatically apply patches on import
@@ -58,6 +58,7 @@ apply_patches()
 
 # Set default MoE config path for SGL and vLLM
 set_default_moe_config_dir()
+
 
 def get_version() -> str:
     """Return the version of torchada."""

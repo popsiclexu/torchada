@@ -12,13 +12,9 @@ torchada allows you to override ATen operators at the C++ level for the `Private
 
 ## Quick Start
 
-### 1. Enable C++ Ops
+C++ extensions are automatically loaded on MUSA platform when torchada is imported.
 
-```bash
-export TORCHADA_ENABLE_CPP_OPS=1
-```
-
-### 2. Write Your Kernel
+### 1. Write Your Kernel
 
 Edit `src/torchada/csrc/musa_ops.mu`:
 
@@ -69,10 +65,10 @@ TORCH_LIBRARY_IMPL(aten, PrivateUse1, m) {
 }
 ```
 
-### 3. Test Your Kernel
+### 2. Test Your Kernel
 
 ```bash
-TORCHADA_ENABLE_CPP_OPS=1 TORCHADA_DEBUG_CPP_OPS=1 python -c "
+TORCHADA_DEBUG_CPP_OPS=1 python -c "
 import torch
 import torchada
 
@@ -87,14 +83,44 @@ print('Result:', y.cpu()[:5])
 | File | Purpose |
 |------|---------|
 | `src/torchada/csrc/ops.h` | Header with utilities (`log_op_call`, `is_override_enabled`) |
-| `src/torchada/csrc/ops.cpp` | Python bindings and C++-only operator overrides |
+| `src/torchada/csrc/ops.cpp` | Python bindings, C++-only implementations, and CUDA-compatible APIs |
 | `src/torchada/csrc/musa_ops.mu` | MUSA kernel implementations |
+
+## Built-in Functions
+
+torchada's C++ extension provides CUDA-compatible implementations of some torch_musa memory management APIs:
+
+### Memory Pool Functions
+
+These functions are automatically injected into `torch.cuda.memory` and allow CUDA code using memory pools to work transparently on MUSA:
+
+- `_cuda_beginAllocateCurrentThreadToPool(device, mempool_id)` - Begin allocating memory from current thread to a memory pool
+- `_cuda_endAllocateToPool(device, mempool_id)` - End allocating memory to a memory pool
+- `_cuda_releasePool(device, mempool_id)` - Release a memory pool
+
+**Usage example:**
+```python
+import torchada
+import torch
+
+# This works transparently on MUSA - no code changes needed
+from torch.cuda.memory import _cuda_beginAllocateCurrentThreadToPool
+from torch.cuda.memory import _cuda_endAllocateToPool
+from torch.cuda.memory import _cuda_releasePool
+
+# Use the functions as in CUDA code
+device = 0
+pool_id = torch.cuda.graph_pool_handle()
+_cuda_beginAllocateCurrentThreadToPool(device, pool_id)
+# ... allocations ...
+_cuda_endAllocateToPool(device, pool_id)
+_cuda_releasePool(device, pool_id)
+```
 
 ## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `TORCHADA_ENABLE_CPP_OPS=1` | Enable C++ operator overrides |
 | `TORCHADA_CPP_OPS_VERBOSE=1` | Show compilation output |
 | `TORCHADA_DEBUG_CPP_OPS=1` | Log operator calls to stdout |
 | `TORCHADA_DISABLE_OP_OVERRIDE_<NAME>=1` | Disable specific operator override |
@@ -106,7 +132,7 @@ To disable a specific operator override at runtime, set the environment variable
 
 ```bash
 # Disable the 'neg' operator override, use torch_musa's default instead
-TORCHADA_ENABLE_CPP_OPS=1 TORCHADA_DISABLE_OP_OVERRIDE_neg=1 python my_script.py
+TORCHADA_DISABLE_OP_OVERRIDE_neg=1 python my_script.py
 ```
 
 **Important**: The operator name in the environment variable should match the name passed to `is_override_enabled()` in the C++ code. For example, if the code uses `is_override_enabled("neg")`, set `TORCHADA_DISABLE_OP_OVERRIDE_neg=1`.

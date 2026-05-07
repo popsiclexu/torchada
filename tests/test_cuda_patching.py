@@ -761,19 +761,22 @@ class TestTorchCudaMemory:
         if not torchada.is_musa_platform():
             pytest.skip("Only applicable on MUSA platform")
 
-        from torchada._cpp_ops import get_module as get_cpp_ops_module
+        from torchada._cpp_ops import get_module
 
-        cpp_ops = get_cpp_ops_module()
+        cpp_ops = get_module()
         if cpp_ops is None:
-            pytest.skip("C++ ops extension not loaded (set TORCHADA_ENABLE_CPP_OPS=1)")
+            pytest.skip("C++ ops extension not loaded")
 
         musa_memory = torch.musa.memory
-        assert hasattr(musa_memory, "_cuda_beginAllocateCurrentThreadToPool"), \
-            "_cuda_beginAllocateCurrentThreadToPool not found in torch.musa.memory"
-        assert hasattr(musa_memory, "_cuda_endAllocateToPool"), \
-            "_cuda_endAllocateToPool not found in torch.musa.memory"
-        assert hasattr(musa_memory, "_cuda_releasePool"), \
-            "_cuda_releasePool not found in torch.musa.memory"
+        assert hasattr(
+            musa_memory, "_cuda_beginAllocateCurrentThreadToPool"
+        ), "_cuda_beginAllocateCurrentThreadToPool not found in torch.musa.memory"
+        assert hasattr(
+            musa_memory, "_cuda_endAllocateToPool"
+        ), "_cuda_endAllocateToPool not found in torch.musa.memory"
+        assert hasattr(
+            musa_memory, "_cuda_releasePool"
+        ), "_cuda_releasePool not found in torch.musa.memory"
 
     def test_memory_pool_functions_importable_from_cuda_memory(self):
         """Test that CUDA memory pool functions can be imported from torch.cuda.memory.
@@ -787,19 +790,22 @@ class TestTorchCudaMemory:
         if not torchada.is_musa_platform():
             pytest.skip("Only applicable on MUSA platform")
 
-        from torchada._cpp_ops import get_module as get_cpp_ops_module
+        from torchada._cpp_ops import get_module
 
-        cpp_ops = get_cpp_ops_module()
+        cpp_ops = get_module()
         if cpp_ops is None:
-            pytest.skip("C++ ops extension not loaded (set TORCHADA_ENABLE_CPP_OPS=1)")
+            pytest.skip("C++ ops extension not loaded")
 
-        from torch.cuda.memory import _cuda_beginAllocateCurrentThreadToPool
-        from torch.cuda.memory import _cuda_endAllocateToPool
-        from torch.cuda.memory import _cuda_releasePool
+        from torch.cuda.memory import (
+            _cuda_beginAllocateCurrentThreadToPool,
+            _cuda_endAllocateToPool,
+            _cuda_releasePool,
+        )
 
         assert callable(_cuda_beginAllocateCurrentThreadToPool)
         assert callable(_cuda_endAllocateToPool)
         assert callable(_cuda_releasePool)
+
 
 class TestTorchGenerator:
     """Test torch.Generator works with cuda device on MUSA platform."""
@@ -2135,15 +2141,17 @@ class TestCppOpsInfrastructure:
         assert hasattr(_cpp_ops, "get_version")
         assert hasattr(_cpp_ops, "get_module")
 
-    def test_cpp_ops_not_loaded_by_default(self):
-        """Test that C++ ops are not loaded by default."""
-        from torchada import _cpp_ops
+    def test_cpp_ops_loaded_on_musa(self):
+        """Test that C++ ops are automatically loaded on MUSA platform."""
+        import torchada
 
-        # Without TORCHADA_ENABLE_CPP_OPS=1, should not be loaded
-        # Note: This test may be affected by other tests that load the module
-        # So we just check the functions exist and are callable
-        assert callable(_cpp_ops.is_loaded)
-        assert callable(_cpp_ops.get_version)
+        if not torchada.is_musa_platform():
+            pytest.skip("Only applicable on MUSA platform")
+
+        from torchada._cpp_ops import is_loaded
+
+        # C++ ops should be automatically loaded on MUSA platform
+        assert is_loaded(), "C++ ops should be loaded automatically on MUSA"
 
     def test_cpp_ops_source_files_exist(self):
         """Test that the C++ source files are packaged correctly."""

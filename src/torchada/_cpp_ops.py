@@ -6,12 +6,10 @@ C++ operator overrides infrastructure for torchada.
 This module handles building and loading C++ extensions that can override
 ATen operator implementations for the PrivateUse1 (MUSA) dispatch key.
 
-Usage:
-    # Enable C++ ops by setting environment variable
-    export TORCHADA_ENABLE_CPP_OPS=1
+C++ extensions are automatically loaded on MUSA platform when torchada is imported.
 
-    # Then import torchada as usual
-    import torchada
+Usage:
+    import torchada  # C++ extensions are loaded automatically on MUSA
 
     # Or explicitly load
     from torchada._cpp_ops import load_cpp_ops
@@ -75,9 +73,7 @@ def load_cpp_ops(force_reload: bool = False) -> Optional[object]:
     """
     Load the C++ operator overrides extension.
 
-    The extension is only loaded if:
-    1. Running on MUSA platform
-    2. TORCHADA_ENABLE_CPP_OPS=1 environment variable is set
+    The extension is automatically loaded on MUSA platform.
 
     Args:
         force_reload: If True, reload the extension even if already loaded.
@@ -89,10 +85,6 @@ def load_cpp_ops(force_reload: bool = False) -> Optional[object]:
 
     if _cpp_ops_module is not None and not force_reload:
         return _cpp_ops_module
-
-    # Check if enabled via environment variable
-    if os.environ.get("TORCHADA_ENABLE_CPP_OPS") != "1":
-        return None
 
     # Check if on MUSA platform
     from ._platform import is_musa_platform
