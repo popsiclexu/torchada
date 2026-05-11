@@ -1258,7 +1258,10 @@ class TestIsCompiledAndBackends:
         except (AttributeError, AssertionError):
             pytest.skip("fp32_precision not available (torchada MUSA-specific attribute)")
 
-        if torch.__version__ >= torch.torch_version.TorchVersion("2.9.0"):
+        if (
+            not torchada.is_musa_platform()
+            and torch.__version__ >= torch.torch_version.TorchVersion("2.9.0")
+        ):
             # PyTorch 2.9+: Only use the new API. Do NOT call torch.get_float32_matmul_precision()
             valid_precisions = ("ieee", "tf32")
             test_values = ["ieee", "tf32"]

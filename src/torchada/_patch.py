@@ -1167,6 +1167,13 @@ def _patch_backends_cuda():
 
     torch.backends.cuda.is_built = patched_is_built
 
+    if (
+        is_musa_platform()
+        and hasattr(torch.backends, "musa")
+        and hasattr(torch.backends.musa, "matmul")
+    ):
+        torch.backends.cuda.matmul = torch.backends.musa.matmul
+
     # Patch cuBLASModule to support fp32_precision attribute
     # This attribute is in newer PyTorch but may be missing in torch_musa's version
     matmul = torch.backends.cuda.matmul
