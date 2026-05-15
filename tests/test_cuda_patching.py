@@ -1242,6 +1242,23 @@ class TestIsCompiledAndBackends:
         # Restore original
         torch.backends.cuda.matmul.allow_tf32 = original
 
+    def test_torch_backends_cuda_matmul_forwards_to_musa(self):
+        """Test torch.backends.cuda.matmul forwards settings to MUSA on MUSA."""
+        import torch
+
+        import torchada
+
+        if not torchada.is_musa_platform() or not hasattr(torch.backends, "musa"):
+            pytest.skip("MUSA matmul backend not available")
+
+        original = torch.backends.musa.matmul.allow_tf32
+        try:
+            torch.backends.cuda.matmul.allow_tf32 = not original
+            assert torch.backends.musa.matmul.allow_tf32 is (not original)
+            assert torch.backends.cuda.matmul.allow_tf32 is (not original)
+        finally:
+            torch.backends.cuda.matmul.allow_tf32 = original
+
     def test_torch_backends_cuda_matmul_fp32_precision(self):
         """Test torch.backends.cuda.matmul.fp32_precision is accessible."""
         import torch
@@ -1258,12 +1275,9 @@ class TestIsCompiledAndBackends:
         except (AttributeError, AssertionError):
             pytest.skip("fp32_precision not available (torchada MUSA-specific attribute)")
 
-        if (
-            not torchada.is_musa_platform()
-            and torch.__version__ >= torch.torch_version.TorchVersion("2.9.0")
-        ):
+        if torch.__version__ >= torch.torch_version.TorchVersion("2.9.0"):
             # PyTorch 2.9+: Only use the new API. Do NOT call torch.get_float32_matmul_precision()
-            valid_precisions = ("ieee", "tf32")
+            valid_precisions = ("none", "ieee", "tf32")
             test_values = ["ieee", "tf32"]
             check_underlying_api = False  # Critical: avoid mixing APIs
         else:

@@ -1137,12 +1137,7 @@ def _patch_backends_cuda():
     This patches:
     - is_built() to return True when MUSA is available (since we're using
       torch.cuda APIs that are redirected to MUSA)
-    - torch.backends.cuda.matmul.fp32_precision to use torch.get/set_float32_matmul_precision
-      (this attribute is missing in some torch_musa versions)
-
-    Note: Other torch.backends.cuda.matmul properties (allow_tf32, etc.) work
-    as-is because they are settings that apply to the internal PyTorch
-    operations regardless of backend.
+    - torch.backends.cuda.matmul attribute access to MUSA matmul semantics
     """
     if not hasattr(torch, "backends") or not hasattr(torch.backends, "cuda"):
         return
@@ -1167,42 +1162,45 @@ def _patch_backends_cuda():
 
     torch.backends.cuda.is_built = patched_is_built
 
-    if (
+    if not (
         is_musa_platform()
         and hasattr(torch.backends, "musa")
         and hasattr(torch.backends.musa, "matmul")
+        and hasattr(torch.backends.cuda, "matmul")
     ):
-        torch.backends.cuda.matmul = torch.backends.musa.matmul
-
-    # Patch cuBLASModule to support fp32_precision attribute
-    # This attribute is in newer PyTorch but may be missing in torch_musa's version
-    matmul = torch.backends.cuda.matmul
-    matmul_class = matmul.__class__
-
-    # Check if fp32_precision is already supported
-    try:
-        _ = matmul.fp32_precision
-        # Already supported, no need to patch
         return
-    except AttributeError:
-        pass
 
-    # Store original methods
+    cuda_matmul = torch.backends.cuda.matmul
+    musa_matmul = torch.backends.musa.matmul
+    matmul_class = cuda_matmul.__class__
     original_getattr = matmul_class.__getattr__
     original_setattr = matmul_class.__setattr__
 
+    try:
+        _ = cuda_matmul.fp32_precision
+        has_native_fp32_precision = True
+    except AttributeError:
+        has_native_fp32_precision = False
+
     def patched_getattr(self, name):
-        if name == "fp32_precision":
+        if name == "fp32_precision" and not has_native_fp32_precision:
             return torch.get_float32_matmul_precision()
-        return original_getattr(self, name)
+        try:
+            return getattr(musa_matmul, name)
+        except (AttributeError, AssertionError):
+            return original_getattr(self, name)
 
     def patched_setattr(self, name, value):
-        if name == "fp32_precision":
+        if name == "fp32_precision" and not has_native_fp32_precision:
             return torch.set_float32_matmul_precision(value)
-        return original_setattr(self, name, value)
+        try:
+            return setattr(musa_matmul, name, value)
+        except (AttributeError, AssertionError):
+            return original_setattr(self, name, value)
 
     matmul_class.__getattr__ = patched_getattr
     matmul_class.__setattr__ = patched_setattr
+
 
 
 @patch_function
