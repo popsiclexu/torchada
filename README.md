@@ -64,6 +64,7 @@ That's it! All `torch.cuda.*` APIs are automatically redirected to `torch.musa.*
 | FlexAttention | `torch.nn.attention.flex_attention` works on MUSA |
 | ctypes Libraries | `ctypes.CDLL` with CUDA function names → MUSA equivalents |
 | Unified Accelerator API | `torch.accelerator.empty_cache()`, `memory_stats()`, `Stream`, `Event`, ... |
+| Triton CUDA Extra | `tl.extra.cuda` → `tl.extra.musa` compatibility on MUSA |
 
 ## Examples
 

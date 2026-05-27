@@ -64,6 +64,7 @@ torch.cuda.synchronize()
 | FlexAttention | `torch.nn.attention.flex_attention` 支持 MUSA 设备 |
 | ctypes 库加载 | `ctypes.CDLL` 使用 CUDA 函数名 → 自动转换为 MUSA |
 | 统一加速器 API | `torch.accelerator.empty_cache()`、`memory_stats()`、`Stream`、`Event` 等 |
+| Triton CUDA Extra | MUSA 上的 `tl.extra.cuda` → `tl.extra.musa` 兼容 |
 
 ## 示例
 
