@@ -147,6 +147,11 @@ JoyAI-LLM-Flash 上、下投影配置。调优结果与环境相关；其他 Tri
 `VLLM_TUNED_CONFIG_FOLDER` 将 SGLang 与 vLLM 指向内置配置。已有环境变量不会
 被覆盖；如需使用自定义配置，请在导入 torchada 前设置相应变量。
 
+标准调优器的使用方法参见
+[`docs/tune_triton_moe.md`](docs/tune_triton_moe.md)；如果需要基于真实路由样本
+分别调优上投影和下投影，参见
+[`docs/tune_triton_moe_sep.md`](docs/tune_triton_moe_sep.md)。
+
 ### SGLang FlashAttention
 
 当 MUSA `flash_attn_interface` 包可用时，torchada 会将

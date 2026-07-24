@@ -4,6 +4,9 @@
 
 `tune_moe.py` is an autotuning and benchmarking tool for the fused MoE (Mixture of Experts) Triton kernels used in torchada. It searches over a large space of GPU kernel configurations (tiling sizes, warp counts, pipeline stages) to find the optimal parameters for each model architecture, batch size, and quantization mode.
 
+For workloads that need separate up/gate and down-projection tuning with real
+captured routing data, use [`tune_triton_moe_sep.md`](tune_triton_moe_sep.md).
+
 The tool supports two modes:
 
 - **Tuning mode** (`--tune`): Searches the full configuration space to find the best kernel parameters for each model × batch size combination, then saves the results to disk for later use.

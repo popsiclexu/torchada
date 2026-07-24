@@ -152,6 +152,10 @@ On import, torchada points SGLang and vLLM to the bundled configurations through
 values are never overwritten, so set either variable before importing torchada
 to use custom configurations.
 
+See [`docs/tune_triton_moe.md`](docs/tune_triton_moe.md) for the standard tuner
+and [`docs/tune_triton_moe_sep.md`](docs/tune_triton_moe_sep.md) for separate
+up/down-projection tuning with captured routing samples.
+
 ### SGLang FlashAttention
 
 When the MUSA `flash_attn_interface` package is available, torchada redirects
