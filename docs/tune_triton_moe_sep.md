@@ -229,9 +229,9 @@ used by a tuning task must have:
 If a sample is too small, tuning stops with a
 `Captured top-k shape ... is smaller` error. Capture at least as many active
 tokens as the largest batch size being tuned. Multiple layers or requests are
-preferred: eager mode cycles through the loaded files as timing iterations
-allow, while graph mode uses the sample with the median number of unique
-experts.
+preferred: both eager and graph modes cycle through the loaded files in groups
+of up to ten samples. Graph capture keeps separate routing metadata buffers
+for those samples so replay measures the same route sequence as eager mode.
 
 ### EP expert-ID numbering
 
@@ -461,13 +461,14 @@ is a Python representation of the tuning results, not a benchmark JSON report.
 
 ## Graph, TMA, and profiling options
 
-`--use-graph` ranks candidates with CUDA/MUSA graph replay and sets
-`TORCHADA_TUNE_USE_GRAPH=1` for the process. Graph replay reduces Python launch
-overhead and is useful when the serving workload also runs under graph capture.
+`--use-graph` passes graph mode directly to every benchmark worker and ranks
+candidates with CUDA/MUSA graph replay. No graph-related environment variable
+is required. Graph replay reduces Python launch overhead and is useful when the
+serving workload also runs under graph capture.
 
-In the current torchada sep implementation, graph mode treats TMA as disabled
-unless `TORCHADA_TUNE_DISABLE_TMA=0` is set. To measure graph replay with TMA
-on a build that provides `triton.set_allocator` and tensor descriptors, use:
+The tuner treats TMA as disabled unless `TORCHADA_TUNE_DISABLE_TMA=0` is set.
+To measure TMA on a build that provides `triton.set_allocator` and tensor
+descriptors, use:
 
 ```bash
 TORCHADA_TUNE_DISABLE_TMA=0 \
@@ -482,9 +483,9 @@ python src/torchada/triton/autotune/fused_moe/tune_moe_sep.py \
 ```
 
 Leave TMA disabled when the installed MUSA Triton build exposes descriptor
-types but lacks the allocator required to launch them. Without `--use-graph`,
-the eager path attempts both non-TMA and TMA measurements regardless of
-`TORCHADA_TUNE_DISABLE_TMA`.
+types but lacks the allocator required to launch them. The setting applies to
+both eager and graph measurement. When disabled, the reported TMA timing is
+the matching non-TMA timing and generated down configs omit `USE_TMA`.
 
 Set `NCU_ENABLE=1` only for kernel profiling. It reduces timing iterations to
 one and is unsuitable for selecting stable production configurations.
@@ -514,8 +515,7 @@ one and is unsuitable for selecting stable production configurations.
 | `TORCHADA_TOPK_IDS_DIR` | Example capture-hook destination; the tuner itself receives the directory through `--topk-ids-dir`. |
 | `SGLANG_MOE_CONFIG_DIR` | Config root above `configs/triton_<version>/` for both writing and runtime lookup. |
 | `TORCHADA_TUNE_MERGE_EXISTING_CONFIG=1` | Merge new batch-size entries into existing normal/down files. |
-| `TORCHADA_TUNE_USE_GRAPH=1` | Enable graph timing; `--use-graph` sets this automatically. |
-| `TORCHADA_TUNE_DISABLE_TMA` | In graph mode, `1` disables TMA; the current default is disabled. Set `0` only when TMA descriptors and allocator are usable. |
+| `TORCHADA_TUNE_DISABLE_TMA` | `1` disables TMA in eager and graph modes; the current default is disabled. Set `0` only when TMA descriptors and allocator are usable. |
 | `NCU_ENABLE=1` | Reduce timing iterations for profiler collection. |
 
 ## Troubleshooting
@@ -548,17 +548,14 @@ errors is skipped; if every candidate is skipped, no config can be selected.
 
 ### TMA allocator errors
 
-Use graph mode with TMA disabled:
+Disable TMA for either eager or graph mode:
 
 ```bash
 TORCHADA_TUNE_DISABLE_TMA=1 \
 python src/torchada/triton/autotune/fused_moe/tune_moe_sep.py \
     ... \
-    --use-graph \
     --tune
 ```
-
-The disable variable does not suppress eager-mode TMA attempts.
 
 ### Generated files are not used
 
